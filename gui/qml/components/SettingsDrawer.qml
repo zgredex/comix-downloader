@@ -45,7 +45,7 @@ Rectangle {
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 24
-            spacing: 20
+            spacing: 24
             
             // Header
             RowLayout {
@@ -69,159 +69,175 @@ Rectangle {
                 }
             }
             
-            // Settings Items
-            ScrollView {
+            // Settings Content (no ScrollView to avoid scrollbar issues)
+            ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                clip: true
+                spacing: 20
                 
-                ColumnLayout {
-                    width: parent.width
-                    spacing: 16
-                    
-                    // Output Format
-                    SettingItem {
-                        label: "Output Format"
-                        RowLayout {
-                            spacing: 8
-                            Repeater {
-                                model: ["images", "pdf", "cbz"]
-                                Rectangle {
-                                    width: 70; height: 32; radius: 6
-                                    color: SettingsBridge.outputFormat === modelData ? accentPrimary : bgElevated
-                                    border.color: textTertiary; border.width: SettingsBridge.outputFormat === modelData ? 0 : 1
-                                    Text { anchors.centerIn: parent; text: modelData.toUpperCase(); font.pixelSize: 12; font.weight: Font.Bold
-                                           color: SettingsBridge.outputFormat === modelData ? bgDeep : textSecondary }
-                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                                        onClicked: SettingsBridge.setValue("output_format", modelData) }
+                // Output Format
+                SettingItem {
+                    label: "Output Format"
+                    RowLayout {
+                        spacing: 8
+                        Repeater {
+                            model: ["images", "pdf", "cbz"]
+                            Rectangle {
+                                width: 75; height: 36; radius: 8
+                                color: SettingsBridge.outputFormat === modelData ? accentPrimary : bgElevated
+                                border.color: SettingsBridge.outputFormat === modelData ? accentPrimary : textTertiary
+                                border.width: 1
+                                
+                                Text { 
+                                    anchors.centerIn: parent
+                                    text: modelData.toUpperCase()
+                                    font.pixelSize: 12
+                                    font.weight: Font.Bold
+                                    color: SettingsBridge.outputFormat === modelData ? bgDeep : textSecondary 
+                                }
+                                MouseArea { 
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: SettingsBridge.setValue("output_format", modelData) 
                                 }
                             }
                         }
                     }
-                    
-                    // Keep Images
-                    SettingItem {
-                        label: "Keep Images After Conversion"
-                        ToggleSwitch {
-                            checked: SettingsBridge.keepImages
-                            onToggled: SettingsBridge.setValue("keep_images", checked)
-                        }
+                }
+                
+                // Keep Images
+                SettingItem {
+                    label: "Keep Images After Conversion"
+                    ToggleSwitch {
+                        checked: SettingsBridge.keepImages
+                        onToggled: SettingsBridge.setValue("keep_images", checked)
                     }
-                    
-                    // Enable Logs
-                    SettingItem {
-                        label: "Enable Debug Logs"
-                        ToggleSwitch {
-                            checked: SettingsBridge.getValue("enable_logs") || false
-                            onToggled: SettingsBridge.setValue("enable_logs", checked)
-                        }
+                }
+                
+                // Enable Logs
+                SettingItem {
+                    label: "Enable Debug Logs"
+                    ToggleSwitch {
+                        checked: SettingsBridge.getValue("enable_logs") || false
+                        onToggled: SettingsBridge.setValue("enable_logs", checked)
                     }
-                    
-                    // Download Path
-                    SettingItem {
-                        label: "Download Path"
-                        Rectangle {
-                            width: 200; height: 36; radius: 6
-                            color: bgElevated; border.color: textTertiary; border.width: 1
-                            TextInput {
-                                anchors.fill: parent; anchors.margins: 8
-                                text: SettingsBridge.downloadPath
-                                color: textPrimary; font.pixelSize: 14
-                                clip: true
-                                onTextChanged: if (text !== SettingsBridge.downloadPath) SettingsBridge.setValue("download_path", text)
-                            }
-                        }
-                    }
-                    
-                    // Max Chapter Workers
-                    SettingItem {
-                        label: "Max Chapter Workers (1-10)"
-                        SpinBox {
-                            id: chapterWorkers
-                            from: 1; to: 10
-                            value: SettingsBridge.maxChapterWorkers
-                            onValueModified: SettingsBridge.setValue("max_chapter_workers", value)
-                            
-                            background: Rectangle { color: bgElevated; radius: 6; border.color: textTertiary; border.width: 1 }
-                            contentItem: Text { text: chapterWorkers.value; font.pixelSize: 14; color: textPrimary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                        }
-                    }
-                    
-                    // Max Image Workers
-                    SettingItem {
-                        label: "Max Image Workers (1-20)"
-                        SpinBox {
-                            id: imageWorkers
-                            from: 1; to: 20
-                            value: SettingsBridge.maxImageWorkers
-                            onValueModified: SettingsBridge.setValue("max_image_workers", value)
-                            
-                            background: Rectangle { color: bgElevated; radius: 6; border.color: textTertiary; border.width: 1 }
-                            contentItem: Text { text: imageWorkers.value; font.pixelSize: 14; color: textPrimary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                        }
-                    }
-                    
-                    // Chapters Display Limit
-                    SettingItem {
-                        label: "Chapters Display Limit (0=all)"
-                        SpinBox {
-                            id: displayLimit
-                            from: 0; to: 500
-                            value: SettingsBridge.getValue("chapters_display_limit") || 20
-                            onValueModified: SettingsBridge.setValue("chapters_display_limit", value)
-                            
-                            background: Rectangle { color: bgElevated; radius: 6; border.color: textTertiary; border.width: 1 }
-                            contentItem: Text { text: displayLimit.value; font.pixelSize: 14; color: textPrimary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                        }
-                    }
-                    
-                    Item { height: 20 }
-                    
-                    // Reset Button
+                }
+                
+                // Download Path
+                SettingItem {
+                    label: "Download Path"
                     Rectangle {
-                        Layout.alignment: Qt.AlignHCenter
-                        width: 160; height: 40; radius: 8
-                        color: resetArea.containsMouse ? error : bgElevated
-                        border.color: error; border.width: 1
+                        width: 220; height: 40; radius: 8
+                        color: bgElevated
+                        border.color: textTertiary; border.width: 1
                         
-                        Text { anchors.centerIn: parent; text: "Reset to Defaults"; font.pixelSize: 13; font.weight: Font.DemiBold
-                               color: resetArea.containsMouse ? textPrimary : error }
-                        
-                        MouseArea {
-                            id: resetArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: SettingsBridge.resetToDefaults()
+                        TextInput {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12; anchors.rightMargin: 12
+                            verticalAlignment: Text.AlignVCenter
+                            text: SettingsBridge.downloadPath
+                            color: textPrimary
+                            font.pixelSize: 14
+                            clip: true
+                            selectByMouse: true
+                            onEditingFinished: SettingsBridge.setValue("download_path", text)
                         }
+                    }
+                }
+                
+                // Max Chapter Workers
+                SettingItem {
+                    label: "Max Chapter Workers (1-10)"
+                    NumberInput {
+                        value: SettingsBridge.maxChapterWorkers
+                        minValue: 1; maxValue: 10
+                        onValueChanged: SettingsBridge.setValue("max_chapter_workers", value)
+                    }
+                }
+                
+                // Max Image Workers
+                SettingItem {
+                    label: "Max Image Workers (1-20)"
+                    NumberInput {
+                        value: SettingsBridge.maxImageWorkers
+                        minValue: 1; maxValue: 20
+                        onValueChanged: SettingsBridge.setValue("max_image_workers", value)
+                    }
+                }
+                
+                // Chapters Display Limit
+                SettingItem {
+                    label: "Chapters Display Limit (0 = all)"
+                    NumberInput {
+                        value: SettingsBridge.getValue("chapters_display_limit") || 20
+                        minValue: 0; maxValue: 500
+                        onValueChanged: SettingsBridge.setValue("chapters_display_limit", value)
+                    }
+                }
+                
+                Item { Layout.fillHeight: true }
+                
+                // Reset Button
+                Rectangle {
+                    Layout.alignment: Qt.AlignHCenter
+                    width: 180; height: 44; radius: 8
+                    color: resetArea.containsMouse ? error : "transparent"
+                    border.color: error; border.width: 2
+                    
+                    Text { 
+                        anchors.centerIn: parent
+                        text: "Reset to Defaults"
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        color: resetArea.containsMouse ? textPrimary : error 
+                    }
+                    
+                    MouseArea {
+                        id: resetArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: SettingsBridge.resetToDefaults()
                     }
                 }
             }
         }
     }
     
-    // Setting Item Component
+    // ═══════════════════════════════════════════════════════════════
+    // SETTING ITEM COMPONENT
+    // ═══════════════════════════════════════════════════════════════
     component SettingItem: ColumnLayout {
         property string label: ""
         default property alias content: contentArea.children
         
         Layout.fillWidth: true
-        spacing: 6
+        spacing: 8
         
-        Text { text: label; font.pixelSize: 13; color: textSecondary }
+        Text { 
+            text: label
+            font.pixelSize: 13
+            font.weight: Font.Medium
+            color: textSecondary 
+        }
         Row { id: contentArea; spacing: 8 }
     }
     
-    // Toggle Switch Component
+    // ═══════════════════════════════════════════════════════════════
+    // TOGGLE SWITCH COMPONENT
+    // ═══════════════════════════════════════════════════════════════
     component ToggleSwitch: Rectangle {
         property bool checked: false
         signal toggled()
         
-        width: 50; height: 26; radius: 13
+        width: 52; height: 28; radius: 14
         color: checked ? accentPrimary : bgElevated
         border.color: checked ? accentPrimary : textTertiary; border.width: 1
         
         Behavior on color { ColorAnimation { duration: 150 } }
         
         Rectangle {
-            width: 20; height: 20; radius: 10
+            width: 22; height: 22; radius: 11
             anchors.verticalCenter: parent.verticalCenter
             x: parent.checked ? parent.width - width - 3 : 3
             color: textPrimary
@@ -230,8 +246,88 @@ Rectangle {
         }
         
         MouseArea {
-            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
             onClicked: { parent.checked = !parent.checked; parent.toggled() }
+        }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // NUMBER INPUT COMPONENT (custom spinbox replacement)
+    // ═══════════════════════════════════════════════════════════════
+    component NumberInput: Rectangle {
+        property int value: 0
+        property int minValue: 0
+        property int maxValue: 100
+        
+        width: 120; height: 40; radius: 8
+        color: bgElevated
+        border.color: textTertiary; border.width: 1
+        
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 4
+            spacing: 0
+            
+            // Minus button
+            Rectangle {
+                Layout.preferredWidth: 32; Layout.fillHeight: true
+                radius: 6
+                color: minusArea.containsMouse ? bgCard : "transparent"
+                
+                Text {
+                    anchors.centerIn: parent
+                    text: "−"
+                    font.pixelSize: 18
+                    font.weight: Font.Bold
+                    color: value > minValue ? accentPrimary : textTertiary
+                }
+                
+                MouseArea {
+                    id: minusArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (value > minValue) value--
+                }
+            }
+            
+            // Value display
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                
+                Text {
+                    anchors.centerIn: parent
+                    text: value
+                    font.pixelSize: 16
+                    font.weight: Font.DemiBold
+                    color: textPrimary
+                }
+            }
+            
+            // Plus button
+            Rectangle {
+                Layout.preferredWidth: 32; Layout.fillHeight: true
+                radius: 6
+                color: plusArea.containsMouse ? bgCard : "transparent"
+                
+                Text {
+                    anchors.centerIn: parent
+                    text: "+"
+                    font.pixelSize: 18
+                    font.weight: Font.Bold
+                    color: value < maxValue ? accentPrimary : textTertiary
+                }
+                
+                MouseArea {
+                    id: plusArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: if (value < maxValue) value++
+                }
+            }
         }
     }
 }
