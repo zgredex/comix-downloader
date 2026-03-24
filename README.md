@@ -47,6 +47,13 @@ cd comix-downloader
 pip install -r requirements.txt
 ```
 
+### Cloudflare Bypass (FlareSolverr)
+Since comix.to employs Cloudflare protection, it is highly recommended to run **FlareSolverr** alongside this downloader to avoid 403 Forbidden errors.
+
+1. Download the latest version of FlareSolverr from: [FlareSolverr Releases](https://github.com/FlareSolverr/FlareSolverr/releases)
+2. Extract the archive and run the executable (`flaresolverr.exe` on Windows).
+3. Keep it running in the background. The downloader automatically detects it at `http://localhost:8191/v1` and will bypass Cloudflare challenges seamlessly.
+
 ---
 
 ## 📖 Usage

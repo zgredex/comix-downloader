@@ -23,7 +23,8 @@ class ConfigManager:
         "download_path": "downloads",
         "retry_count": 3,
         "retry_delay": 2.0,
-        "chapters_display_limit": 20  # 0 = show all
+        "chapters_display_limit": 20,  # 0 = show all
+        "flaresolverr_url": "http://localhost:8191/v1"
     }
     
     def __init__(self, config_path: str | Path = "config.json"):

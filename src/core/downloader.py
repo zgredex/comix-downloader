@@ -2,7 +2,6 @@
 Main downloader with threading support for concurrent downloads.
 """
 
-import requests
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Callable
@@ -15,17 +14,13 @@ from ..formats.pdf import create_pdf
 from ..formats.cbz import create_cbz
 from ..utils.retry import RetryableDownloader
 from ..utils.logger import get_logger
+from ..utils.session import get_session
 
 logger = get_logger(__name__)
 
 
 class ImageDownloader:
     """Downloads images with threading and retry logic."""
-    
-    HEADERS = {
-        "Referer": "https://comix.to/",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0"
-    }
     
     def __init__(self, config: DownloadConfig):
         self.config = config
@@ -42,7 +37,7 @@ class ImageDownloader:
             Tuple of (index, image_bytes, error_message)
         """
         def _download():
-            response = requests.get(url, headers=self.HEADERS, timeout=30)
+            response = get_session().get(url, timeout=30)
             response.raise_for_status()
             return response.content
         
