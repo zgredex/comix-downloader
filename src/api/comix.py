@@ -262,6 +262,7 @@ class ComixAPI:
                 context = browser.new_context(
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
                 )
+                context.add_init_script("window.__origToDataURL = HTMLCanvasElement.prototype.toDataURL;")
                 page = context.new_page()
                 
                 # Preload all the images
@@ -325,13 +326,30 @@ class ComixAPI:
                                     const el = document.querySelector('.rpage-page[data-page="' + n + '"]');
                                     if (!el) return null;
                                     const isLoading = el.classList.contains('is-loading');
+                                    
+                                    // Check canvas
                                     const c = el.querySelector('canvas');
-                                    if (c && c.width > 0 && c.height > 0 && !isLoading) {
-                                        return {type: 'canvas'};
+                                    if (c && c.width > 10 && c.height > 10) {
+                                        if (isLoading) return null; // Wait if still loading
+                                        const toDataURL = window.__origToDataURL || c.toDataURL;
+                                        const data = toDataURL.call(c, 'image/webp', 0.95);
+                                        if (data.length < 20000) {
+                                            return {type: 'skip'}; // Blank/Ad canvas
+                                        }
+                                        return {type: 'canvas_data', data: data};
                                     }
+                                    
+                                    // Check image
                                     const i = el.querySelector('img');
-                                    if (i && i.src && i.complete && i.naturalWidth > 0) {
-                                        return {type: 'img', src: i.src};
+                                    if (i && i.src) {
+                                        if (i.complete) {
+                                            if (i.naturalWidth > 10 && i.naturalHeight > 10) {
+                                                return {type: 'img', src: i.src};
+                                            }
+                                            if (i.naturalWidth > 0 && i.naturalWidth <= 10) {
+                                                return {type: 'skip'}; // 1x1 placeholder
+                                            }
+                                        }
                                     }
                                     return null;
                                 }""",
@@ -347,7 +365,15 @@ class ComixAPI:
                         logger.error(f"Page {page_num} timed out waiting for render.")
                         continue
                         
-                    # Extract the image data or URL from canvas/image (handling blobs via canvas)
+                    if ready.get('type') == 'skip':
+                        logger.debug(f"Page {page_num} is an ad/placeholder page. Skipping.")
+                        continue
+                        
+                    if ready.get('type') == 'canvas_data':
+                        image_urls.append(ready.get('data'))
+                        continue
+                        
+                    # Extract the image data or URL from image (handling blobs via canvas)
                     try:
                         extracted_url = page.evaluate(
                             """(n) => {
@@ -357,7 +383,8 @@ class ComixAPI:
                                     
                                     const c = el.querySelector('canvas');
                                     if (c && c.width > 0 && c.height > 0) {
-                                        return c.toDataURL('image/webp', 0.95);
+                                        const toDataURL = window.__origToDataURL || c.toDataURL;
+                                        return toDataURL.call(c, 'image/webp', 0.95);
                                     }
                                     
                                     const i = el.querySelector('img');
@@ -369,7 +396,8 @@ class ComixAPI:
                                                 canvas.height = i.naturalHeight || i.height;
                                                 const ctx = canvas.getContext('2d');
                                                 ctx.drawImage(i, 0, 0);
-                                                return canvas.toDataURL('image/webp', 0.95);
+                                                const toDataURL = window.__origToDataURL || canvas.toDataURL;
+                                                return toDataURL.call(canvas, 'image/webp', 0.95);
                                             } catch (e) {
                                                 return null;
                                             }
