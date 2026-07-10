@@ -98,34 +98,13 @@ Thus, for the known current build, its construction is simply a static literal
 six-codepoint sequence. It was identified from the public asset's unpacking
 behavior; it is not a derived credential.
 
-### Guarded key rediscovery
-
-`src/api/secure.py` also contains a resilience layer:
-`_derive_table_key()`. It searches every 1–8 character substring of the first
-200 characters of each recovered builder value. Each candidate is used as a
-repeating XOR pad and is accepted only when the resulting text is more than
-85% printable ASCII and contains at least two markers from:
-
-```text
-X-Scramble-Hash, function, Object, Array, atob
-```
-
-If no candidate passes, the code tries the known `QHKXSH` fallback. This is a
-**discovery heuristic**, not a protocol rule and not proof that every future
-asset will embed its XOR pad as such a substring. The subsequent structural
-validation remains mandatory: the decoded pool must have at least 400 entries
-and contain `X-Scramble-Hash`.
-
 ### If `QHKXSH` changes
 
-There are three possible outcomes:
+The implementation deliberately has one outcome:
 
 | Asset change | Current behavior | Required maintainer action |
 | --- | --- | --- |
-| The new key is found by the guarded candidate search and all later structural checks pass. | The new pool is used automatically. | Validate signed API calls and a complete CBZ before trusting the update. |
-| The key changes but is not rediscovered. | The fallback produces an invalid pool and `_decode_pool()` raises `SecureModuleError`. No API request is made with a guessed plan. | Inspect the new public asset, update the static key extractor, add a regression fixture/test, and validate. |
-| A wrong candidate happens to look plausible but later plan invariants fail. | `extract_plan()` raises when it cannot uniquely identify tables/keys/rotation. | Tighten the candidate validation and update the parser from the new asset. |
-| A wrong candidate produces a structurally valid but semantically wrong plan. | The server rejects the signed request or the response cannot be decoded. | Treat this as an extractor failure; make key selection more discriminating and add a live regression check. |
+| The XOR key changes. | The fixed key yields an invalid pool and `_decode_pool()` raises `SecureModuleError`. No API request is made with a guessed plan. | Inspect the new public asset, update the static extractor and this document, add a regression fixture/test, and validate two full browser-free downloads. |
 
 Never respond to such a failure by adding browser automation or an opaque
 captured-output fallback. Fail closed, update the static parser, and preserve
