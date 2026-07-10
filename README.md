@@ -76,7 +76,10 @@ The current chapter request is signed with an asset-derived token in the _
 query parameter. The implementation fails closed if the secure asset shape
 changes instead of silently producing bad data.
 
-See ARCHITECTURE.md for the exact extraction, signing, and decrypting process.
+The canonical maintainer/AI protocol reference is
+[ARCHITECTURE.md](ARCHITECTURE.md). It explains the complete extraction,
+`QHKXSH` handling, signing, response decryption, failure modes, and validation
+procedure.
 
 ## Verification
 
