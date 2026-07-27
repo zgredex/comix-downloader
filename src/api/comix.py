@@ -78,13 +78,14 @@ class BrowserFreeComix:
             self._detail = detail
 
     def get(self, path: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-        """Make one signed API request; every request receives a fresh TLS session."""
+        """Make one signed API request; every request receives a fresh TLS session.
+        
+        Note: Extra query parameters cause 403 — only the token is included.
+        """
         plan = self.plan
-        request_params = dict(params or {})
-        request_params[plan.token_parameter] = signed_token(path, request_params, plan)
         response = requests.get(
             f"{API}{path}",
-            params=request_params,
+            params={plan.token_parameter: signed_token(path, {}, plan)},
             impersonate="chrome",
             headers={**API_HEADERS, "Referer": self.page_url, "Origin": SITE},
             timeout=30,
@@ -186,36 +187,29 @@ class ComixAPI:
 
     @classmethod
     def get_all_chapters(cls, manga_code: str) -> list[Chapter]:
-        """Fetch chapter pages directly from the signed API, without DOM scraping."""
+        """Fetch chapters from the signed API. Only first page (20 items) — API rejects pagination."""
         client = cls._client(manga_code)
         chapters: list[Chapter] = []
         seen: set[int] = set()
-        page = 1
-        while True:
-            result = client.get(f"/manga/{manga_code}/chapters", {"page": page})
-            items = result.get("items", []) if isinstance(result, dict) else []
-            for item in items:
-                chapter_id = item.get("id")
-                if not isinstance(chapter_id, int) or chapter_id in seen:
-                    continue
-                seen.add(chapter_id)
-                group = item.get("group") if isinstance(item.get("group"), dict) else {}
-                chapters.append(
-                    Chapter(
-                        chapter_id=chapter_id,
-                        number=str(item.get("number", "?")),
-                        title=item.get("name") or None,
-                        volume=str(item["volume"]) if item.get("volume") else None,
-                        votes=item.get("votes"),
-                        group_name=group.get("name") or ("Official" if item.get("isOfficial") else "Unknown"),
-                        pages_count=0,
-                    )
+        result = client.get(f"/manga/{manga_code}/chapters")
+        items = result.get("items", []) if isinstance(result, dict) else []
+        for item in items:
+            chapter_id = item.get("id")
+            if not isinstance(chapter_id, int) or chapter_id in seen:
+                continue
+            seen.add(chapter_id)
+            group = item.get("group") if isinstance(item.get("group"), dict) else {}
+            chapters.append(
+                Chapter(
+                    chapter_id=chapter_id,
+                    number=str(item.get("number", "?")),
+                    title=item.get("name") or None,
+                    volume=str(item["volume"]) if item.get("volume") else None,
+                    votes=item.get("votes"),
+                    group_name=group.get("name") or ("Official" if item.get("isOfficial") else "Unknown"),
+                    pages_count=0,
                 )
-            meta = result.get("meta", {}) if isinstance(result, dict) else {}
-            last_page = meta.get("lastPage") or meta.get("last_page") or page
-            if not items or page >= int(last_page):
-                break
-            page += 1
+            )
         chapters.sort(key=lambda item: (float(item.number) if _is_number(item.number) else float("inf"), item.chapter_id))
         return chapters
 

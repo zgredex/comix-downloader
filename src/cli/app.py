@@ -166,27 +166,49 @@ def download(
     output: str = typer.Option(None, "--output", "-o", help="Output directory"),
 ):
     """Download manga directly from command line."""
+    import re
     if url:
         # Direct download mode
         config_manager = ConfigManager()
         
-        if format:
+        if format is not None:
             config_manager.set("output_format", format)
-        if output:
+        if output is not None:
             config_manager.set("download_path", output)
         config = config_manager.get_download_config()
         setup_logging(enable=config.enable_logs)
         
         try:
-            manga_code = ComixAPI.extract_manga_code(url)
-            manga = ComixAPI.get_manga_info(manga_code)
-            all_chapters = ComixAPI.get_all_chapters(manga_code)
+            # Check if URL has a chapter ID (e.g., /11098734-chapter-45)
+            chapter_match = re.search(r'/(\d+)-chapter-(\d+(?:[.]\d+)?)', url)
             
-            if chapters and chapters.lower() != "all":
-                from .menus import ChapterSelector
-                selected = ChapterSelector._parse_selection(chapters, all_chapters)
+            if chapter_match:
+                chapter_id = int(chapter_match.group(1))
+                chapter_number = chapter_match.group(2)
+                manga_code = ComixAPI.extract_manga_code(url)
+                manga = ComixAPI.get_manga_info(manga_code)
+                
+                # Create a Chapter object directly from URL
+                from ..core.models import Chapter
+                selected = [Chapter(
+                    chapter_id=chapter_id,
+                    number=chapter_number,
+                    title=None,
+                    volume=None,
+                    votes=None,
+                    group_name="Unknown",
+                    pages_count=0,
+                )]
             else:
-                selected = all_chapters
+                manga_code = ComixAPI.extract_manga_code(url)
+                manga = ComixAPI.get_manga_info(manga_code)
+                all_chapters = ComixAPI.get_all_chapters(manga_code)
+                
+                if chapters and chapters.lower() != "all":
+                    from .menus import ChapterSelector
+                    selected = ChapterSelector._parse_selection(chapters, all_chapters)
+                else:
+                    selected = all_chapters
             
             downloader = MangaDownloader(config)
             
