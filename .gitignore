@@ -207,3 +207,5 @@ marimo/_lsp/
 __marimo__/
 ENCRYPTION.md
 BUILD_UPDATE.md
+ARCHITECTURE.md
+REVERSE_ENGINEERING.md
