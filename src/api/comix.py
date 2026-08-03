@@ -12,7 +12,7 @@ import re
 import threading
 from dataclasses import dataclass
 from typing import Any, Optional
-from urllib.parse import urljoin
+from urllib.parse import urlencode, urljoin
 
 from curl_cffi import requests
 
@@ -78,14 +78,15 @@ class BrowserFreeComix:
             self._detail = detail
 
     def get(self, path: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-        """Make one signed API request; every request receives a fresh TLS session.
-        
-        Note: Extra query parameters cause 403 — only the token is included.
-        """
+        """Make one signed API request; every request receives a fresh TLS session."""
         plan = self.plan
+        request_path = path
+        if params:
+            request_path = f"{path}?{urlencode(params, doseq=True)}"
+        request_params = {plan.token_parameter: signed_token(request_path, {}, plan)}
         response = requests.get(
-            f"{API}{path}",
-            params={plan.token_parameter: signed_token(path, {}, plan)},
+            f"{API}{request_path}",
+            params=request_params,
             impersonate="chrome",
             headers={**API_HEADERS, "Referer": self.page_url, "Origin": SITE},
             timeout=30,
@@ -187,29 +188,46 @@ class ComixAPI:
 
     @classmethod
     def get_all_chapters(cls, manga_code: str) -> list[Chapter]:
-        """Fetch chapters from the signed API. Only first page (20 items) — API rejects pagination."""
+        """Fetch chapters from the signed API across all available pages."""
         client = cls._client(manga_code)
         chapters: list[Chapter] = []
         seen: set[int] = set()
-        result = client.get(f"/manga/{manga_code}/chapters")
-        items = result.get("items", []) if isinstance(result, dict) else []
-        for item in items:
-            chapter_id = item.get("id")
-            if not isinstance(chapter_id, int) or chapter_id in seen:
-                continue
-            seen.add(chapter_id)
-            group = item.get("group") if isinstance(item.get("group"), dict) else {}
-            chapters.append(
-                Chapter(
-                    chapter_id=chapter_id,
-                    number=str(item.get("number", "?")),
-                    title=item.get("name") or None,
-                    volume=str(item["volume"]) if item.get("volume") else None,
-                    votes=item.get("votes"),
-                    group_name=group.get("name") or ("Official" if item.get("isOfficial") else "Unknown"),
-                    pages_count=0,
+        page = 1
+        while True:
+            params = {"page": page} if page > 1 else None
+            result = client.get(f"/manga/{manga_code}/chapters", params=params)
+            items = result.get("items", []) if isinstance(result, dict) else []
+            if not items:
+                break
+
+            new_items_added = False
+            for item in items:
+                chapter_id = item.get("id")
+                if not isinstance(chapter_id, int) or chapter_id in seen:
+                    continue
+                seen.add(chapter_id)
+                new_items_added = True
+                group = item.get("group") if isinstance(item.get("group"), dict) else {}
+                chapters.append(
+                    Chapter(
+                        chapter_id=chapter_id,
+                        number=str(item.get("number", "?")),
+                        title=item.get("name") or None,
+                        volume=str(item["volume"]) if item.get("volume") else None,
+                        votes=item.get("votes"),
+                        group_name=group.get("name") or ("Official" if item.get("isOfficial") else "Unknown"),
+                        pages_count=0,
+                    )
                 )
-            )
+
+            meta = result.get("meta") if isinstance(result, dict) else None
+            last_page = meta.get("lastPage") if isinstance(meta, dict) else None
+            if isinstance(last_page, int) and page >= last_page:
+                break
+            if not new_items_added:
+                logger.warning("Chapter page %s returned no new results; stopping pagination", page)
+                break
+            page += 1
         chapters.sort(key=lambda item: (float(item.number) if _is_number(item.number) else float("inf"), item.chapter_id))
         return chapters
 
